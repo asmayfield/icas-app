@@ -30,9 +30,9 @@ public class PlacesAdapter extends ArrayAdapter<PlaceLikelihood> {
         TextView textView = new TextView(context);
 
         Place place = objects.get(position).getPlace();
-        if (place.getPlaceTypes().contains(Place.TYPE_UNIVERSITY)) {
+        if (place.getPlaceTypes().contains(Place.TYPE_UNIVERSITY) || place.getPlaceTypes().contains(Place.TYPE_GAS_STATION)) {
             textView.setText(String.format("Name: %s", place.getName()));
-            textView.setTextSize(20);
+            textView.setTextSize(30);
         }
 
         return textView;

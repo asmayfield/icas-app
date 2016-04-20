@@ -1,6 +1,7 @@
 package com.andrew.getlocation;
 
 import android.Manifest;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -26,6 +27,7 @@ import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.PlaceDetectionApi;
+import com.google.android.gms.location.places.PlaceFilter;
 import com.google.android.gms.location.places.PlaceLikelihood;
 import com.google.android.gms.location.places.PlaceLikelihoodBuffer;
 import com.google.android.gms.location.places.Places;
@@ -33,6 +35,7 @@ import com.google.android.gms.plus.model.people.Person;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener {
 
@@ -41,6 +44,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     private LocationListener locationListener;
     private GoogleApiClient mGoogleApiClient;
     private ListView listView;
+    private Button refreshButton;
     private PlacesAdapter placesAdapter;
 
     @Override
@@ -50,6 +54,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
 
         listView = (ListView) findViewById(R.id.places_nearby_list);
+        refreshButton = (Button) findViewById(R.id.refreshButton);
+
+        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (mBluetoothAdapter == null) {
+            // Device does not support Bluetooth
+            // Sucks to suck
+        }
+
+        if (!mBluetoothAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, 8);
+        }
 
 
         mGoogleApiClient = new GoogleApiClient
@@ -61,16 +77,19 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
         // Get Current Location and Places Likelihood
         PendingResult<PlaceLikelihoodBuffer> result = Places.PlaceDetectionApi.getCurrentPlace(mGoogleApiClient, null);
-
         result.setResultCallback(new ResultCallback<PlaceLikelihoodBuffer>() {
             @Override
             public void onResult(PlaceLikelihoodBuffer likelyPlaces) {
 
                 ArrayList<PlaceLikelihood> likelyPlacesArray = new ArrayList<PlaceLikelihood>();
+                Log.i("Count", "Total Results: "+likelyPlaces.getCount());
 
                 for (PlaceLikelihood placeLikelihood : likelyPlaces) {
                     if (placeLikelihood.getPlace().getPlaceTypes().contains(Place.TYPE_UNIVERSITY))
                         likelyPlacesArray.add(placeLikelihood);
+                    if (placeLikelihood.getPlace().getPlaceTypes().contains(Place.TYPE_GAS_STATION))
+                        likelyPlacesArray.add(placeLikelihood);
+
 //                    if (placeLikelihood.getPlace().getPlaceTypes().contains(Place.TYPE_UNIVERSITY)){
 //                        Log.i("Result Callback Places", String.format("Place '%s' Possible Types: %s has likelihood: %g",
 //                                placeLikelihood.getPlace(),
@@ -84,6 +103,67 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 //                likelyPlaces.release();
             }
         });
+
+
+        refreshButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                PendingResult<PlaceLikelihoodBuffer> result = Places.PlaceDetectionApi.getCurrentPlace(mGoogleApiClient, null);
+                result.setResultCallback(new ResultCallback<PlaceLikelihoodBuffer>() {
+                    @Override
+                    public void onResult(PlaceLikelihoodBuffer likelyPlaces) {
+
+                        ArrayList<PlaceLikelihood> likelyPlacesArray = new ArrayList<PlaceLikelihood>();
+                        Log.i("Count", "Total Results: "+likelyPlaces.getCount());
+
+                        for (PlaceLikelihood placeLikelihood : likelyPlaces) {
+                            if (placeLikelihood.getPlace().getPlaceTypes().contains(Place.TYPE_UNIVERSITY))
+                                likelyPlacesArray.add(placeLikelihood);
+                            if (placeLikelihood.getPlace().getPlaceTypes().contains(Place.TYPE_GAS_STATION))
+                                likelyPlacesArray.add(placeLikelihood);
+
+//                    if (placeLikelihood.getPlace().getPlaceTypes().contains(Place.TYPE_UNIVERSITY)){
+//                        Log.i("Result Callback Places", String.format("Place '%s' Possible Types: %s has likelihood: %g",
+//                                placeLikelihood.getPlace(),
+//                                Arrays.deepToString( placeLikelihood.getPlace().getPlaceTypes().toArray()),
+//                                placeLikelihood.getLikelihood()));
+//                    }
+
+                        }
+                        placesAdapter = new PlacesAdapter(MainActivity.this, 0, 0, likelyPlacesArray);
+                        listView.setAdapter(placesAdapter);
+//                likelyPlaces.release();
+                    }
+                });
+
+            }
+        });
+
+
+//        result.setResultCallback(new ResultCallback<PlaceLikelihoodBuffer>() {
+//            @Override
+//            public void onResult(PlaceLikelihoodBuffer likelyPlaces) {
+//
+//                ArrayList<PlaceLikelihood> likelyPlacesArray = new ArrayList<PlaceLikelihood>();
+//
+//                for (PlaceLikelihood placeLikelihood : likelyPlaces) {
+//                    if (placeLikelihood.getPlace().getPlaceTypes().contains(Place.TYPE_UNIVERSITY))
+//                        likelyPlacesArray.add(placeLikelihood);
+//                    if (placeLikelihood.getPlace().getPlaceTypes().contains(Place.TYPE_GAS_STATION))
+//                        likelyPlacesArray.add(placeLikelihood);
+////                    if (placeLikelihood.getPlace().getPlaceTypes().contains(Place.TYPE_UNIVERSITY)){
+////                        Log.i("Result Callback Places", String.format("Place '%s' Possible Types: %s has likelihood: %g",
+////                                placeLikelihood.getPlace(),
+////                                Arrays.deepToString( placeLikelihood.getPlace().getPlaceTypes().toArray()),
+////                                placeLikelihood.getLikelihood()));
+////                    }
+//
+//                }
+//                placesAdapter = new PlacesAdapter(MainActivity.this, 0, 0, likelyPlacesArray);
+//                listView.setAdapter(placesAdapter);
+////                likelyPlaces.release();
+//            }
+//        });
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -137,7 +217,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 return;
             }
         } else {
-            configureButton();
+            refreshButton();
         }
 
     }
@@ -147,13 +227,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         switch (requestCode) {
             case 10:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    configureButton();
+                    refreshButton();
                 }
                 return;
         }
     }
 
-    private void configureButton() {
+    private void refreshButton() {
 //        button.setOnClickListener(new View.OnClickListener() {
 //            @Override
 //            public void onClick(View v) {
